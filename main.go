@@ -47,6 +47,15 @@ func main() {
 		} `json:"choices"`
 	}
 
+	//Prepare struct for getting json response from chatgpt
+	type OpenaiImgResp struct {
+			Created int `json:"created"`
+
+			Data  []struct {
+				URL string `json:"url"`
+			} `json:"data"`
+		
+	}
 
 
 	e := echo.New()
@@ -55,12 +64,10 @@ func main() {
 		u := new(User)
 		if err := c.Bind(u); err != nil {return err}
 
-
 		if u.Message == "" {
 			return c.JSON(http.StatusCreated, "Empty message !")
 		}
 		
-
 		payload := strings.NewReader(`{"model": "gpt-3.5-turbo", "messages": [{"role": "user", "content": "` + u.Message + `"}]}`)
 
 		client := &http.Client {}
@@ -84,5 +91,49 @@ func main() {
 		return c.JSON(http.StatusCreated, openaiResp.Choices[0].Message)
 
 	})
+
+	e.POST("/image", func(c echo.Context) error {
+		urlImage := "https://api.openai.com/v1/images/generations"
+
+		u := new(User)
+		if err := c.Bind(u); err != nil {return err}
+
+		if u.Message == "" {
+			return c.JSON(http.StatusCreated, "Empty message !")
+		}
+		
+		payload := strings.NewReader(`{"prompt": "` + u.Message + `", "n": 1, "size": "256x256"}`)
+
+		client := &http.Client {}
+
+		req, err := http.NewRequest("POST", urlImage, payload)
+		if err != nil { return err}
+
+		req.Header.Add("Content-Type", "application/json")
+		req.Header.Add("Authorization", "Bearer "+ apiKey )
+
+
+		res, err := client.Do(req)
+		if err != nil {return err}
+		defer res.Body.Close()
+	  
+		body, err := ioutil.ReadAll(res.Body)
+		if err != nil {return err}
+
+		openaiImgResp := OpenaiImgResp{}
+		json.Unmarshal([]byte(body), &openaiImgResp)
+
+
+		if openaiImgResp.Data[0].URL == "" {
+			return c.JSON(http.StatusCreated, "Empty message !")
+		}
+
+		return c.JSON(http.StatusCreated, openaiImgResp.Data[0].URL)
+
+	})
+
+
+
+
 	e.Logger.Fatal(e.Start(":1323"))
 }
