@@ -8,6 +8,7 @@ import (
 	"strings"
 	"io/ioutil"
 	"encoding/json"
+	//"os"
 )
 
 func main() {
@@ -52,7 +53,13 @@ func main() {
 	e.POST("/chat", func(c echo.Context) error {
 
 		u := new(User)
-		if err := c.Bind(u); err != nil { return err}
+		if err := c.Bind(u); err != nil {return err}
+
+
+		if u.Message == "" {
+			return c.JSON(http.StatusCreated, "Empty message !")
+		}
+		
 
 		payload := strings.NewReader(`{"model": "gpt-3.5-turbo", "messages": [{"role": "user", "content": "` + u.Message + `"}]}`)
 
